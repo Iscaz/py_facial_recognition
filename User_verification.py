@@ -11,11 +11,6 @@ app = Flask(__name__)
 # Load the face detection and recognition models
 mtcnn = MTCNN(keep_all=True, device='cuda' if torch.cuda.is_available() else 'cpu')
 model = InceptionResnetV1(pretrained='vggface2').eval().to('cuda' if torch.cuda.is_available() else 'cpu')
-# Loading the InceptionResnetV1 neural network architecture by using the pretrained weights on vggface2 dataset
-# Goes into evaluation mode to turn off behaviours that are only used during model training
-# Parameters to be accepted when using this model are tensors, since PyTorch operates using tensors
-# Tensors must also be converted to the appropriate shape (batch_size, channels, height, width) which are converted later on in face_tensors
-# Tensors must also be normalized *dividing by 255 to get pixel value range of 0 to 1 instead of 0 to 255 originally
 
 saved_reference_embeddings = None  # Global variable for reference embeddings
 
@@ -23,30 +18,14 @@ saved_reference_embeddings = None  # Global variable for reference embeddings
 def find_face_encodings(image):
     # Get face bounding boxes and align the faces
     boxes, _ = mtcnn.detect(image)
-    # mtcnn returns two outputs, thats why there is underscore after boxes(the bounding boxes)
-    # detect is a method under mtcnn object that identifies faces in the (image)
 
     if boxes is not None:
+        # Crop and resize faces and convert into embeddings
         faces = [image[int(b[1]):int(b[3]), int(b[0]):int(b[2])] for b in boxes]
-        # Crop the face from the image and resize to 160x160
-        # Detects then crops the faces in the form of bounding box coordinates, b
-        # In this loop, the bounding boxes that have been created (representing the faces detected), are then added to the faces list
-
         face_tensors = [torch.tensor(cv2.resize(face, (160, 160))).permute(2, 0, 1).float() / 255 for face in faces]
-        # In this second loop, the faces that have been cropped are converted into tensors which are resized, permutated and normalized, ultimately added into the face_tensors list
-
-        # Stack faces and get embeddings
         embeddings = model(torch.stack(face_tensors).to('cuda' if torch.cuda.is_available() else 'cpu'))
-        # By using model method, the tensors are being converted into one tensor using ".stack"
-        # Adding the tensors to gpu if available, otherwise cpu
-
         return embeddings.detach().cpu().numpy(), boxes  # Return embeddings and bounding boxes
-        # PyTorch methods 
-        # detach() creates new tensor that shares same data but does not require gradients
-        # cpu() moves tensor to cpu since tensors will be converted to NumPy array where its operations only work with cpu tensors
-        # numpy() converts tensor to NumPy array for further processing
-        # boxes is the second element returned which returns the bounding boxes of the detected faces
-
+        
     else:
         return None, None
 
