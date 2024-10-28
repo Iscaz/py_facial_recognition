@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selfie Capture with Real-Time Verification</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9ecef;
+            color: #343a40;
+            transition: background-color 0.5s;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #6c757d;
+            font-size: 2.5em;
+            text-align: center;
+        }
+        canvas {
+            border: 8px solid #6c757d;
+            border-radius: 15px;
+            width: 640px;
+            height: 480px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        #similarity {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: red; /* Default to red */
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            color: white;
+            background-color: #6c757d;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Live Face Verification</h1>
+    
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <div id="similarity">Similarity: 0%</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const similarityText = document.getElementById('similarity');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                // Create a video element to stream from, but keep it hidden
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                // Process video frames
+                function processVideoFrame() {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/png');
+
+                    // Send the frame to the server for face detection and comparison
+                    fetch('/verify_live', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ frame: dataUrl })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.similarity !== undefined) {
+                            similarityText.innerText = `Similarity: ${data.similarity}%`;
+                            similarityText.style.color = data.similarity > 70 ? 'green' : 'red';
+
+                            // Draw the bounding box
+                            if (data.box) {
+                                const [x1, y1, x2, y2] = data.box;
+                                const width = x2 - x1;
+                                const height = y2 - y1;
+                                context.strokeStyle = data.similarity > 70 ? 'green' : 'red';
+                                context.lineWidth = 4;
+                                context.strokeRect(x1, y1, width, height);
+
+                                // Set text properties
+                                context.fillStyle = data.similarity > 70 ? 'green' : 'red'; // Same color as bounding box
+                                context.font = '16px Arial'; // Set font size and family
+                                    
+                                // Calculate text position
+                                const text = `Similarity: ${data.similarity}%`; // Your text here
+                                const textX = x1; // X position of the text (same as the left of the box)
+                                const textY = y2 + 20; // Y position of the text (20 pixels below the box)
+
+                                // Draw the text
+                                context.fillText(text, textX, textY);
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error processing frame:', err));
+                    
+                    // Process next frame after a delay to reduce load
+                    setTimeout(processVideoFrame, 100);  // Adjust delay as needed
+                }
+
+                // Start processing video frames after the video is ready
+                video.onloadedmetadata = () => {
+                    processVideoFrame();
+                };
+            })
+            .catch(err => {
+                console.error('Error accessing webcam: ', err);
+            });
+    </script>
+
+</body>
+</html>
+ 
