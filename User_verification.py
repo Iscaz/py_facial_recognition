@@ -67,31 +67,26 @@ def verify_live():
         # Return no face found or no reference embeddings
         return jsonify({'similarity': 0, 'box': None})
 
-# Route to paste embedding (first page)
+# Paste and submit embedding (first page)
 @app.route('/')
-# Calls paste_embeddings function that returns the 'paste_embedding' html page
 def paste_embedding():
     return render_template('paste_embedding.html')
 
 @app.route('/submit_embedding', methods=['POST'])
-# Calls submit_embeddings function that creates an object (embedding_text) that gets its value from the embedding form from the http post request
 def submit_embedding():
     embedding_text = request.form['embedding']
     
     try:
-        # Decode base64 text into NumPy array
+        # Decode pasted base64 string into raw bytes, then into NumPy array of float 32 value 
         embedding_bytes = base64.b64decode(embedding_text)
-        # Decodes the embedding_text from base64 string back into raw bytes
         reference_embeddings = np.frombuffer(embedding_bytes, np.float32)
-        # Converts the bytes into NumPy array of float32 value (second argument as the output datatype)
-        reference_embeddings = reference_embeddings.reshape(1, -1)  
-        # Reshape as necessary for cosine similarity
+        reference_embeddings = reference_embeddings.reshape(1, -1) # Reshape as necessary for cosine similarity
         
         global saved_reference_embeddings
         saved_reference_embeddings = reference_embeddings  # Store embeddings for later comparison
 
         return redirect(url_for('selfie'))
-        # A URL is dynamically created for the 'selfie' route and the user is redirected to the 'selfie' page 
+        # A URL is dynamically created for the 'selfie' route and the user is redirected to the 'selfie' page once string is successfully converted
 
     except Exception as e:
         return f"Error processing embeddings: {str(e)}"
