@@ -71,13 +71,13 @@
 
     <script>
         // Declaring variables
-        const canvas = document.getElementById('canvas'); //Finds HTML element with canvas id 
-        const context = canvas.getContext('2d'); //Gets 2d drawing conetxt to allow for erndering on the canvas
+        const canvas = document.getElementById('canvas'); // Finds HTML element with canvas id 
+        const context = canvas.getContext('2d'); // Gets 2d drawing conetxt to allow for erndering on the canvas
         const similarityText = document.getElementById('similarity'); 
 
         navigator.mediaDevices.getUserMedia({ video: true }) 
-        //Built in global object to access media capabilities (only video stream is needed)
-        //If user grants permission, a Promise is returned that resolves to the media stream (video)
+        // Built in global object to access media capabilities (only video stream is needed)
+        // If user grants permission, a Promise is returned that resolves to the media stream (video)
             .then(stream => {
                 // Create a video element to stream from, but keep it hidden
                 const video = document.createElement('video'); // Create video element to capture frames for canvas element
@@ -86,36 +86,36 @@
 
                 // Process video frames
                 function processVideoFrame() {
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const dataUrl = canvas.toDataURL('image/png');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height); // Drawing current frame obtained from the video stream onto the canvas following its dimensions (set earlier)
+                    const dataUrl = canvas.toDataURL('image/png'); // Content from the frames (pictures) are converted into Base64-encoded string 
 
                     // Send the frame to the server for face detection and comparison
                     fetch('/verify_live', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ frame: dataUrl })
+                        headers: { 'Content-Type': 'application/json' }, // JSON data being sent
+                        body: JSON.stringify({ frame: dataUrl }) // dataUrl is added as a JSON object under key: frame // then conveted into JSON string format 
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.similarity !== undefined) {
                             similarityText.innerText = `Similarity: ${data.similarity}%`;
-                            similarityText.style.color = data.similarity > 70 ? 'green' : 'red';
+                            similarityText.style.color = data.similarity > 70 ? 'green' : 'red'; // Set color of text to green if similarity is above 70 percent, otherwise red
 
                             // Draw the bounding box
                             if (data.box) {
-                                const [x1, y1, x2, y2] = data.box;
-                                const width = x2 - x1;
-                                const height = y2 - y1;
-                                context.strokeStyle = data.similarity > 70 ? 'green' : 'red';
-                                context.lineWidth = 4;
-                                context.strokeRect(x1, y1, width, height);
+                                const [x1, y1, x2, y2] = data.box; // Bounding box coordinates (top-left and bottom-right corners)
+                                const width = x2 - x1; // Calculate width
+                                const height = y2 - y1; // Calculate height
+                                context.strokeStyle = data.similarity > 70 ? 'green' : 'red'; // Set logic for color of rectangle
+                                context.lineWidth = 4; // Rectangle line thickness
+                                context.strokeRect(x1, y1, width, height); // Draws outline of rectangle on the canvas
 
                                 // Set text properties
                                 context.fillStyle = data.similarity > 70 ? 'green' : 'red'; // Same color as bounding box
                                 context.font = '16px Arial'; // Set font size and family
                                     
                                 // Calculate text position
-                                const text = `Similarity: ${data.similarity}%`; // Your text here
+                                const text = `Similarity: ${data.similarity}%`; 
                                 const textX = x1; // X position of the text (same as the left of the box)
                                 const textY = y2 + 20; // Y position of the text (20 pixels below the box)
 
