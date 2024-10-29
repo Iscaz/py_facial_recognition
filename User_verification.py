@@ -35,44 +35,24 @@ def find_face_encodings(image):
 @app.route('/verify_live', methods=['POST'])
 def verify_live():
     global saved_reference_embeddings
-    # Allows variable to be used outside this fucntion
     data = request.json
-    # A python dictionary is created called data to store JSON data sent in the POST request for further conversion later
 
     # Decode the base64 frame from the webcam
     frame_data = data['frame'].split(',')[1]
-    # data is an object that is accessing the 'frame' key to retrieve the respective values
-    # split splits the substring to access the second part of the string (by using index 1) which would be after the comma delimiter
-    
-    img_data = base64.b64decode(frame_data)
-    # this function decodes the base64 encoded string into raw binary (bytes)
-
-    np_img = np.frombuffer(img_data, np.uint8)
-    # NumPy array is created from the converted byte data
-    # np.frombuffer contains two arguments, first is input(raw data) and second is the output and its specified datatype
-    # np.uint8 indicates that the data type is unsigned 8-bit integers (standard representation for image pixel values (0-255))
-    # This step makes np_img into a one-dimensional NumPy array with pixel values of the image
-
+    img_data = base64.b64decode(frame_data) # Decodes the base64 encoded string into raw binary (bytes)
+    np_img = np.frombuffer(img_data, np.uint8) # Convert byte data (img_data) to NumPy array in unsigned 8-bit integers
     image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)  # Convert to an image
-    # np_img is then converted into image format so OpenCV can work with it through imdecode function
-    # Second parameter cv2.IMREAD_COLOR tells OpenCV to load the image in color (converts 1D array of pixel into 3D array for color images for further processing)
-
+    
     # Get the encodings of the captured image
     compared_embeddings, boxes = find_face_encodings(image)
-    # Using the function created previously, embeddings of the detected face and the bounding box of that face is returned
 
     if compared_embeddings is not None and saved_reference_embeddings is not None:
         # Calculate cosine similarity
         similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)
-        # cosine_similarity function compares the similarity between the two vectors passed through
 
         similarity = similarity_score[0][0] * 100 
-        # Since the result of cosine_similarity is a 2D array, the similarity_score[0][0] extracts the actual similarity value
-        # Times by 100 to convert to percentage
 
-        # Prepare the bounding box (assuming we're only tracking the first detected face)
-        box = boxes[0] if len(boxes) > 0 else None
-        # Selecting the first face detected (index 0), as long as there is more than one face
+        box = boxes[0] if len(boxes) > 0 else None # Selecting the first face detected (index 0), as long as there is more than one face
 
         box = [int(b) for b in box] if box is not None else None
         # bounding box coordinates are converted into integer for pixel accuracy
@@ -80,7 +60,6 @@ def verify_live():
         # Return the similarity percentage and the bounding box
         return jsonify({
             'similarity': round(similarity, 2),
-            # Return the similarity percentage that is rounded to 2 decimal places
 
             'box': box  # Send the box as [x, y, width, height] to draw rectangle around the detected face
         })
