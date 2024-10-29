@@ -70,16 +70,19 @@
     <div id="similarity">Similarity: 0%</div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        const similarityText = document.getElementById('similarity');
+        // Declaring variables
+        const canvas = document.getElementById('canvas'); //Finds HTML element with canvas id 
+        const context = canvas.getContext('2d'); //Gets 2d drawing conetxt to allow for erndering on the canvas
+        const similarityText = document.getElementById('similarity'); 
 
-        navigator.mediaDevices.getUserMedia({ video: true })
+        navigator.mediaDevices.getUserMedia({ video: true }) 
+        //Built in global object to access media capabilities (only video stream is needed)
+        //If user grants permission, a Promise is returned that resolves to the media stream (video)
             .then(stream => {
                 // Create a video element to stream from, but keep it hidden
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.play();
+                const video = document.createElement('video'); // Create video element to capture frames for canvas element
+                video.srcObject = stream; // Built in part of video element allowing media streams
+                video.play(); // Initiate the stream
 
                 // Process video frames
                 function processVideoFrame() {
