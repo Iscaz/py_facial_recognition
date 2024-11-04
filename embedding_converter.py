@@ -4,7 +4,6 @@ from PIL import Image
 import numpy as np
 import base64
 import torchvision.transforms as transforms
-import os
 
 # Load your image
 # Define the relative path from the project root
