@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paste Embedding</title>
+    <title>Paste Embeddings</title>
     <style>
         body {
             display: flex;
@@ -60,11 +60,15 @@
 </head>
 <body>
 
-    <h1>Paste Photo Embedding</h1>
+    <h1>Paste Photo Embeddings</h1>
     <form action="/submit_embedding" method="POST">
-        <label for="embedding">Paste the base64-encoded embeddings here:</label><br><br>
+        <label for="embedding">Paste the first base64-encoded embedding:</label><br><br>
         <textarea id="embedding" name="embedding" required></textarea><br><br>
-        <button type="submit">Submit Embedding</button>
+        
+        <label for="embedding2">Paste the second base64-encoded embedding:</label><br><br>
+        <textarea id="embedding2" name="embedding2" required></textarea><br><br>
+        
+        <button type="submit">Submit Embeddings</button>
     </form>
 
 </body>
