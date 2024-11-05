@@ -47,25 +47,45 @@ def verify_live():
     compared_embeddings, boxes = find_face_encodings(image)
 
     if compared_embeddings is not None and saved_reference_embeddings is not None:
-        # Calculate cosine similarity
-        similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)
+        results = []  # Initialize results as an empty list
+        similarities = []  # List to store similarity scores
 
-        similarity = similarity_score[0][0] * 100 
+        for i, box in enumerate(boxes):
+            # Calculate cosine similarity for each detected face's embedding
+            similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings[i])
+            similarity = similarity_score[0][0] * 100
 
-        box = boxes[0] if len(boxes) > 0 else None # Selecting the first face detected (index 0), as long as there is more than one face
+            # Convert bounding box coordinates to integers for pixel accuracy
+            box = [int(b) for b in box]
 
-        box = [int(b) for b in box] if box is not None else None
-        # bounding box coordinates are converted into integer for pixel accuracy
+            # Append the similarity and bounding box for this face to results
+            results.append({
+                'similarity': round(similarity, 2),
+                'box': box  # Box coordinates as [x, y, width, height]
+            })
 
-        # Return the similarity percentage and the bounding box
+            # Append similarity score to similarities list for reshaping later
+            similarities.append(round(similarity, 2))
+
+        print("Similarities before reshaping:", similarities)  # Debugging print
+
+        if not similarities:
+            return jsonify({'error': 'No similarities calculated, no faces detected.'})
+
+        # Now, reshape the similarities array to be 2D
+        reshaped_similarities = np.array(similarities).reshape(-1, 1)
+
+        # Return JSON response with the reshaped similarity scores
         return jsonify({
-            'similarity': round(similarity, 2),
-
-            'box': box  # Send the box as [x, y, width, height] to draw rectangle around the detected face
+            'similarities': reshaped_similarities.tolist(),  # Convert to list for JSON serialization
+            'results': results
         })
+
     else:
-        # Return no face found or no reference embeddings
-        return jsonify({'similarity': 0, 'box': None})
+        # Return if no face found or no reference embeddings
+        return jsonify([{'similarity': 0, 'box': None}])
+
+
 
 # Paste and submit embedding (first page)
 @app.route('/')
@@ -75,15 +95,18 @@ def paste_embedding():
 @app.route('/submit_embedding', methods=['POST'])
 def submit_embedding():
     embedding_text = request.form['embedding']
+    embedding_text2 = request.form['embedding2']
     
     try:
-        # Decode pasted base64 string into raw bytes, then into NumPy array of float 32 value 
+        # Decode pasted base64 string into raw bytes, then into NumPy array of float 32 value for both embeddings
         embedding_bytes = base64.b64decode(embedding_text)
-        reference_embeddings = np.frombuffer(embedding_bytes, np.float32)
-        reference_embeddings = reference_embeddings.reshape(1, -1) # Reshape as necessary for cosine similarity
+        reference_embeddings = np.frombuffer(embedding_bytes, np.float32).reshape(1, -1) # Reshape as necessary for cosine similarity
+        
+        embedding_bytes2 = base64.b64decode(embedding_text2)
+        reference_embeddings2 = np.frombuffer(embedding_bytes2, np.float32).reshape(1, -1)
         
         global saved_reference_embeddings
-        saved_reference_embeddings = reference_embeddings  # Store embeddings for later comparison
+        saved_reference_embeddings = np.vstack([reference_embeddings, reference_embeddings])  # Store embeddings for later comparison
 
         return redirect(url_for('selfie'))
         # A URL is dynamically created for the 'selfie' route and the user is redirected to the 'selfie' page once string is successfully converted
