@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 import base64
 import numpy as np
 import cv2
@@ -14,91 +14,63 @@ model = InceptionResnetV1(pretrained='vggface2').eval().to('cuda' if torch.cuda.
 
 saved_reference_embeddings = None  # Global variable for reference embeddings
 
-# Creating the function to find face encodings (embeddings)
+# Function to find face encodings (embeddings)
 def find_face_encodings(image):
-    # Get face bounding boxes and align the faces
-    boxes, _ = mtcnn.detect(image)
-
-    if boxes is not None:
-        # Crop and resize faces and convert into embeddings
-        faces = [image[int(b[1]):int(b[3]), int(b[0]):int(b[2])] for b in boxes]
-        face_tensors = [torch.tensor(cv2.resize(face, (160, 160))).permute(2, 0, 1).float() / 255 for face in faces]
-        embeddings = model(torch.stack(face_tensors).to('cuda' if torch.cuda.is_available() else 'cpu'))
-        return embeddings.detach().cpu().numpy(), boxes  # Return embeddings and bounding boxes
-        
-    else:
+    try:
+        boxes, _ = mtcnn.detect(image)
+        if boxes is not None and len(boxes) > 0:
+            print("Detected boxes:", boxes)  # Check detected face coordinates
+            faces = [image[int(b[1]):int(b[3]), int(b[0]):int(b[2])] for b in boxes]
+            face_tensors = [
+                torch.tensor(cv2.resize(face, (160, 160))).permute(2, 0, 1).float() / 255 for face in faces
+            ]
+            embeddings = model(torch.stack(face_tensors).to('cuda' if torch.cuda.is_available() else 'cpu'))
+            return embeddings.detach().cpu().numpy(), boxes
+        else:
+            print("No faces detected in the image.")  # New debug statement
+            return None, None
+    except Exception as e:
+        print(f"Error in find_face_encodings: {e}")
         return None, None
 
-# Real-time face verification route
-# Detecting scanned face and finding its embeddings
-# Comparing the newly found embeddings with the embeddings obtained earlier
-@app.route('/verify_live', methods=['POST'])
-def verify_live():
-    global saved_reference_embeddings
-    data = request.json
 
-    # Decode the base64 frame from the webcam
-    frame_data = data['frame'].split(',')[1]
-    img_data = base64.b64decode(frame_data) # Decodes the base64 encoded string into raw binary (bytes)
-    np_img = np.frombuffer(img_data, np.uint8) # Convert byte data (img_data) to NumPy array in unsigned 8-bit integers
-    image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)  # Convert to an image
-    
-    # Get the encodings of the captured image
-    compared_embeddings, boxes = find_face_encodings(image)
-
-    if compared_embeddings is not None and saved_reference_embeddings is not None:
-        # Calculate cosine similarity
-        similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)
-
-        similarity = similarity_score[0][0] * 100 
-
-        box = boxes[0] if len(boxes) > 0 else None # Selecting the first face detected (index 0), as long as there is more than one face
-
-        box = [int(b) for b in box] if box is not None else None
-        # bounding box coordinates are converted into integer for pixel accuracy
-
-        # Return the similarity percentage and the bounding box
-        return jsonify({
-            'similarity': round(similarity, 2),
-
-            'box': box  # Send the box as [x, y, width, height] to draw rectangle around the detected face
-        })
-    else:
-        # Return no face found or no reference embeddings
-        return jsonify({'similarity': 0, 'box': None})
-
-# Route to paste embedding (first page)
 @app.route('/')
-# Calls paste_embeddings function that returns the 'paste_embedding' html page
-def paste_embedding():
-    return render_template('paste_embedding.html')
+def index():
+    return render_template('compare_embedding.html')  # Render the single page
 
-@app.route('/submit_embedding', methods=['POST'])
-# Calls submit_embeddings function that creates an object (embedding_text) that gets its value from the embedding form from the http post request
-def submit_embedding():
+@app.route('/compare', methods=['POST'])
+def compare():
+    global saved_reference_embeddings
+
     embedding_text = request.form['embedding']
-    
-    try:
-        # Decode base64 text into NumPy array
-        embedding_bytes = base64.b64decode(embedding_text)
-        # Decodes the embedding_text from base64 string back into raw bytes
-        reference_embeddings = np.frombuffer(embedding_bytes, np.float32)
-        # Converts the bytes into NumPy array of float32 value (second argument as the output datatype)
-        reference_embeddings = reference_embeddings.reshape(1, -1)  
-        # Reshape as necessary for cosine similarity
-        
-        global saved_reference_embeddings
-        saved_reference_embeddings = reference_embeddings  # Store embeddings for later comparison
+    image_text = request.form['image']
 
-        return redirect(url_for('selfie'))
-        # A URL is dynamically created for the 'selfie' route and the user is redirected to the 'selfie' page 
+    # Process the base64-encoded embedding
+    try:
+        embedding_bytes = base64.b64decode(embedding_text)
+        saved_reference_embeddings = np.frombuffer(embedding_bytes, np.float32).reshape(1, -1)
 
     except Exception as e:
-        return f"Error processing embeddings: {str(e)}"
+        return jsonify({'similarity': 0, 'error': f"Error processing embedding: {str(e)}"})
 
-@app.route('/selfie')
-def selfie():
-    return render_template('camera.html')
+    # Process the base64-encoded image
+    try:
+        
+        img_data = base64.b64decode(image_text)
+        np_img = np.frombuffer(img_data, np.uint8)
+        image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+
+        compared_embeddings, boxes = find_face_encodings(image)
+
+        if compared_embeddings is not None and saved_reference_embeddings is not None:
+            similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)
+            similarity = similarity_score[0][0] * 100
+            return jsonify({'similarity': round(similarity, 2)})
+        else:
+            return jsonify({'similarity': 0})
+
+    except Exception as e:
+        return jsonify({'similarity': 0, 'error': f"Error processing image: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(debug=True)
