@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Embedding</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9ecef;
+            color: #343a40;
+            transition: background-color 0.5s;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #6c757d;
+            font-size: 2.5em;
+            text-align: center;
+        }
+        label {
+            font-size: 1.2em;
+            color: #343a40;
+        }
+        textarea {
+            width: 60%;
+            height: 150px;
+            padding: 12px;
+            border: 2px solid #6c757d;
+            border-radius: 5px;
+            resize: none;
+            margin-bottom: 20px;
+            font-size: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            color: white;
+            background-color: #6c757d;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Compare Photo Embedding</h1>
+    <form id="compare-form" action="/compare" method="POST">
+        <label for="embedding">Paste the base64-encoded embeddings here:</label><br><br>
+        <textarea id="embedding" name="embedding" required></textarea><br><br>
+
+        <label for="image">Paste the base64-encoded image here:</label><br><br>
+        <textarea id="image" name="image" required></textarea><br><br>
+
+        <button type="submit">Compare</button>
+    </form>
+
+    <div class="result" id="result"></div>
+
+    <script>
+        const form = document.getElementById('compare-form');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const response = await fetch('/compare', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            document.getElementById('result').innerText = `Similarity: ${result.similarity}%`;
+        };
+    </script>
+
+</body>
+</html>
