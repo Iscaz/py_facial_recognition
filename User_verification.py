@@ -27,7 +27,7 @@ def find_face_encodings(image):
             embeddings = model(torch.stack(face_tensors).to('cuda' if torch.cuda.is_available() else 'cpu'))
             return embeddings.detach().cpu().numpy(), boxes
         else:
-            print("No faces detected in the image.")  # New debug statement
+            print("No faces detected in the image.")  
             return None, None
     except Exception as e:
         print(f"Error in find_face_encodings: {e}")
@@ -55,7 +55,6 @@ def compare():
 
     # Process the base64-encoded image
     try:
-        
         img_data = base64.b64decode(image_text)
         np_img = np.frombuffer(img_data, np.uint8)
         image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
