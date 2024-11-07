@@ -64,7 +64,16 @@ def compare():
         if compared_embeddings is not None and saved_reference_embeddings is not None:
             similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)
             similarity = similarity_score[0][0] * 100
-            return jsonify({'similarity': round(similarity, 2)})
+            if similarity >= 60 :
+                return jsonify({
+                    'status': "match",
+                    'similarity': round(similarity, 2)
+                })
+            else:
+                return jsonify({
+                    'status': "no match",
+                    'similarity': round(similarity, 2)
+                })
         else:
             return jsonify({'similarity': 0})
 

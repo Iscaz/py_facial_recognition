@@ -5,7 +5,7 @@ def image_to_base64(image_path):
         encoded_string = base64.b64encode(image_file.read())
         return encoded_string.decode('utf-8')
     
-image_path = "stored_faces/zach-selfie.jpg"
+image_path = "stored_faces/ryan2.jpeg"
 base64_string = image_to_base64(image_path)
 
 print(base64_string)

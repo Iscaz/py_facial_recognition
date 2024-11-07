@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 
 # Load your image
 # Define the relative path from the project root
-image_path = "stored_faces/tarek_selfie2.jpg"
+image_path = "stored_faces/ryan_passport.jpg"
 image = Image.open(image_path)
 
 # Define the necessary transformations for face embeddings
