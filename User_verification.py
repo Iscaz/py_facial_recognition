@@ -40,21 +40,26 @@ def index():
 
 @app.route('/compare', methods=['POST'])
 def compare():
-    global saved_reference_embeddings
 
     # Retrieve embedding and images from the form
-    embedding_text = request.form.get('embedding')
-    image_texts = [request.form.get(f'image{i}') for i in range(1, 5)]  # Add more range values for more images
+    embedding_texts = [request.form.get(f'embedding {i}') for i in range(1, 6)]
+    image_texts = [request.form.get(f'image {i}') for i in range(1, 6)]  # Add more range values for more images
 
     # Process the base64-encoded embedding
-    try:
-        embedding_bytes = base64.b64decode(embedding_text)
-        saved_reference_embeddings = np.frombuffer(embedding_bytes, np.float32).reshape(1, -1)
-    except Exception as e:
-        return jsonify({'similarity': 0, 'error': f"Error processing embedding: {str(e)}"})
+    embeddings = []
+    for idx, embedding_text in enumerate(embedding_texts, start=1):
+        if not embedding_text:
+            continue
+        try:
+            embedding_bytes = base64.b64decode(embedding_text)
+            saved_reference_embeddings = np.frombuffer(embedding_bytes, np.float32).reshape(1, -1)
+            embeddings.append({'id': f'embedding {idx}', 'value': saved_reference_embeddings})
 
-    # Process and compare each image
-    similarities = []
+        except Exception as e:
+            return jsonify({'similarity': 0, 'error': f"Error processing embedding: {str(e)}"})
+    
+    # Process base-64 image
+    image_embeddings = []
     for idx, image_text in enumerate(image_texts, start=1):
         if not image_text:
             continue  # Skip if the image is not provided
@@ -64,33 +69,57 @@ def compare():
             img_data = base64.b64decode(image_text)
             np_img = np.frombuffer(img_data, np.uint8)
             image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
-
-            # Find face encodings
             compared_embeddings, boxes = find_face_encodings(image)
-            if compared_embeddings is not None:
-                # Calculate similarity score
-                similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)[0][0] * 100
 
-                # Check if there's a match
-                if similarity_score >= 70:
-                    return jsonify({
-                        'status': "match",
-                        f'image {idx}': round(similarity_score, 2)
-                    })
+            image_embeddings.append({'id': f'image {idx}', 'value': compared_embeddings})
 
-                similarities.append({
-                    f'image {idx}': round(similarity_score, 2)
-                })
-            else:
-                similarities.append({
-                    f'image {idx}': 0,
-                    'error': "No face detected or embeddings are None"
-                })
         except Exception as e:
-            similarities.append({
+            return jsonify({
                 f'image {idx}': 0,
                 'error': f"Error processing image {idx}: {str(e)}"
             })
+
+    # Compare each embedding with each image, and add matches and similarities into a list
+    matches = []
+    similarities = []
+
+    try:
+        for embedding_data in embeddings:  # Each entry is {'id': 'embedding X', 'value': ...}
+            embedding_id = embedding_data['id']
+            saved_reference_embeddings = embedding_data['value']
+
+            if saved_reference_embeddings is not None:
+                for image_data in image_embeddings:  # Each entry is {'id': 'image X', 'value': ...}
+                    image_id = image_data['id']
+                    compared_embeddings = image_data['value']
+
+                    similarity_score = cosine_similarity(saved_reference_embeddings, compared_embeddings)[0][0] * 100
+
+                    if similarity_score >= 70:
+                        matches.append({
+                            'embedding': embedding_id,
+                            'image': image_id,
+                            'similarity': round(similarity_score, 2),
+                            'status': "match"
+                        })
+                    else:
+                        similarities.append({
+                            'embedding': embedding_id,
+                            'image': image_id,
+                            'similarity': round(similarity_score, 2)
+                        })
+            else:
+                return jsonify({
+                    f'image {idx}': 0,
+                    'error': "No face detected or embeddings are None"
+                })
+    except:
+        return jsonify({'similarity': 0, 'error': 'Error with embedding'})
+
+    if matches:
+        return jsonify({'matches': matches})
+    else:
+        return jsonify({'status': "no match", 'similarities': similarities})
 
     # If no matches are found, return all similarity scores
     if similarities:
@@ -99,8 +128,7 @@ def compare():
             'similarities': similarities
         })
 
-    return jsonify({'similarity': 0, 'error': 'No valid images provided'})
-
+    return jsonify({'similarity': 0, 'error': 'No valid images provided', 'embeddings':embedding_texts})
 
 if __name__ == "__main__":
     app.run(debug=True)
