@@ -121,14 +121,5 @@ def compare():
     else:
         return jsonify({'status': "no match", 'similarities': similarities})
 
-    # If no matches are found, return all similarity scores
-    if similarities:
-        return jsonify({
-            'status': "no match",
-            'similarities': similarities
-        })
-
-    return jsonify({'similarity': 0, 'error': 'No valid images provided', 'embeddings':embedding_texts})
-
 if __name__ == "__main__":
     app.run(debug=True)
