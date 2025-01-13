@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Feed</title>
+    <style>
+        #similarity { font-size: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Live Face Comparison Similarity Feed</h1>
+    <video id="webcam" width="640" height="480" autoplay></video>
+    <div id="similarity">Similarity: 0.0</div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const similarityDiv = document.getElementById('similarity');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((error) => {
+                console.error("Error accessing webcam: ", error);
+            });
+
+        const sendFrame = async (frame) => {
+            const formData = new FormData();
+            formData.append("frame", frame);
+
+            const response = await fetch('/get_similarity', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.similarity !== null) {
+                similarityDiv.innerText = `Similarity: ${data.similarity.toFixed(2)}`;
+            }
+        };
+
+        const captureFrame = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                sendFrame(blob);
+            }, 'image/jpeg');
+        };
+
+        setInterval(captureFrame, 1000);  // Capture frame every second
+    </script>
+</body>
+</html>

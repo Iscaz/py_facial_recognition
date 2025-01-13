@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Face Embedding</title>
+</head>
+<body>
+    <h1>Upload Face Embedding</h1>
+    <form action="/upload_embedding" method="POST">
+        <label for="embedding">Base64 Embedding:</label>
+        <textarea id="embedding" name="embedding" rows="10" cols="50" required></textarea><br><br>
+        <input type="submit" value="Upload Embedding">
+    </form>
+</body>
+</html>
