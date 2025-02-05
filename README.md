@@ -46,7 +46,7 @@ This project consists of two separate APIs:
 
 ## Generating Base64 Data
 
-Use the `embedding_converter.py` and `photo_converter.py` files to generate the base64 data needed for requests. Simply enter the file path of the desired photo for conversion.
+Use the `embedding_converter.py` and `photo_converter.py` files to generate the base64 data needed for requests. Run the files separately and simply enter the file path of the desired photo for conversion.
 
 ## API Endpoints
 
