@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Feed & Face Similarity</title>
+    <style>
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #container {
+            position: relative;
+            display: inline-block;
+        }
+        #similarity { font-size: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Webcam Feed & Face Similarity</h1>
+    <div id="container">
+        <video id="webcam" width="640" height="480" autoplay></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+    <div id="similarity">Similarity: 0.0</div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const similarityDiv = document.getElementById('similarity');
+        const ctx = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((error) => {
+                console.error("Error accessing webcam: ", error);
+            });
+
+        const sendFrame = async (frame) => {
+            const formData = new FormData();
+            formData.append("frame", frame);
+
+            const response = await fetch('/get_similarity', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.similarity !== null) {
+                similarityDiv.innerText = `Similarity: ${data.similarity.toFixed(2)}`;
+                drawBoundingBoxes(data.boxes);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        };
+
+        const captureFrame = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                sendFrame(blob);
+            }, 'image/jpeg');
+        };
+
+        const drawBoundingBoxes = (boxes) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            boxes.forEach(([x1, y1, x2, y2]) => {
+                ctx.strokeStyle = "green";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            });
+        };
+
+        setInterval(captureFrame, 200);  // Capture frame every 0.2 second
+    </script>
+</body>
+</html>

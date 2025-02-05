@@ -32,12 +32,21 @@ def find_face_encodings(image):
 
 embeddings, _ = find_face_encodings(image)
 if embeddings is not None:
+
     # Convert embeddings to bytes and then to Base64
     embeddings_bytes = embeddings.tobytes()
     embeddings_base64 = base64.b64encode(embeddings_bytes).decode('utf-8')
     
     # Copy the Base64 string to clipboard
     pyperclip.copy(embeddings_base64)
-    print(embeddings_base64)
+
+    # Count rows
+    rows = len(embeddings)
+    # Count total elements
+    total_elements = sum(len(row) for row in embeddings)
+    print(f"Rows: {rows}, Total Elements: {total_elements}")
+    
+    # Print the size of the embeddings in bytes
+    print(f"Size of embeddings in bytes: {embeddings.nbytes}")
 else:
     print("No embeddings were created.")
