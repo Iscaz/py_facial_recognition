@@ -3,19 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Feed</title>
+    <title>Webcam Feed & Face Similarity</title>
     <style>
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #container {
+            position: relative;
+            display: inline-block;
+        }
         #similarity { font-size: 20px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Live Face Comparison Similarity Feed</h1>
-    <video id="webcam" width="640" height="480" autoplay></video>
+    <h1>Webcam Feed & Face Similarity</h1>
+    <div id="container">
+        <video id="webcam" width="640" height="480" autoplay></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
     <div id="similarity">Similarity: 0.0</div>
 
     <script>
         const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
         const similarityDiv = document.getElementById('similarity');
+        const ctx = canvas.getContext('2d');
 
         navigator.mediaDevices.getUserMedia({ video: true })
             .then((stream) => {
@@ -37,6 +51,9 @@
             const data = await response.json();
             if (data.similarity !== null) {
                 similarityDiv.innerText = `Similarity: ${data.similarity.toFixed(2)}`;
+                drawBoundingBoxes(data.boxes);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
         };
 
@@ -51,7 +68,16 @@
             }, 'image/jpeg');
         };
 
-        setInterval(captureFrame, 1000);  // Capture frame every second
+        const drawBoundingBoxes = (boxes) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            boxes.forEach(([x1, y1, x2, y2]) => {
+                ctx.strokeStyle = "green";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            });
+        };
+
+        setInterval(captureFrame, 200);  // Capture frame every 0.2 second
     </script>
 </body>
 </html>

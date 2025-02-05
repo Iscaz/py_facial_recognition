@@ -66,7 +66,8 @@ def compare():
             embeddings.append({'id': f'embedding {idx}', 'value': reference_embeddings})
 
         except Exception as e:
-            return jsonify({'similarity': 0, 'error': f"Error processing embedding: {str(e)}"})
+            print(f"Error processing embedding {idx}: {e}")
+            continue
     
     # Process base-64 image
     image_embeddings = []
@@ -85,10 +86,8 @@ def compare():
             image_embeddings.append({'id': f'image {idx}', 'value': compared_embeddings})
 
         except Exception as e:
-            return jsonify({
-                f'image {idx}': 0,
-                'error': f"Error processing image {idx}: {str(e)}"
-            })
+            print(f"Error processing image {idx}: {e}")
+            continue
 
     # Compare each embedding with each image, and add matches and similarities into a list
     matches = []
